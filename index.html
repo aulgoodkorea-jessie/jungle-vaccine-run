@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>정글 백신 런</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="frame">
+    <canvas id="game" width="480" height="780"></canvas>
+
+    <button id="mute" type="button" aria-pressed="false">소리 켜짐</button>
+
+    <section id="screen-menu" class="screen">
+      <p class="eyebrow">정글 속 달리기</p>
+      <h1>정글 백신 런</h1>
+      <p class="lead">바이러스를 피하고 백신을 모으며<br>최대한 멀리 달려 보세요.</p>
+      <div class="actions">
+        <button id="btn-start" class="primary" type="button">달리러 가기</button>
+        <button id="btn-select" class="ghost" type="button">캐릭터 고르기</button>
+      </div>
+      <div class="help">
+        <p><b>← →</b> 레인 이동 · <b>↑ / Space</b> 점프</p>
+        <p>화면 왼쪽·오른쪽을 누르거나, 위로 쓸어 올리기</p>
+        <p class="credit">배경음악 Alex Morgan, K-Pop Dance Instrumental (CC BY 4.0)</p>
+      </div>
+      <p class="meta">지금 친구 <strong id="menu-character">멍멍</strong> · 최고 <strong id="menu-best">0</strong></p>
+    </section>
+
+    <section id="screen-select" class="screen" hidden>
+      <h2>누구랑 달릴까?</h2>
+      <p class="lead">능력치는 같아요. 마음에 드는 친구를 골라 보세요.</p>
+      <div class="cards">
+        <button class="card" type="button" data-character="dog">
+          <img src="assets/dog-front.png" alt="파란 스카프를 한 강아지 멍멍">
+          <strong>멍멍</strong>
+          <span>파란 스카프 강아지<br>달리는 포즈로 질주</span>
+        </button>
+        <button class="card" type="button" data-character="chick">
+          <img src="assets/chick-front.png" alt="노란색 병아리 삐약">
+          <strong>삐약</strong>
+          <span>노란 병아리<br>폴짝폴짝 스프라이트</span>
+        </button>
+      </div>
+      <div class="actions">
+        <button id="btn-confirm" class="primary" type="button">이 친구로 출발</button>
+        <button id="btn-back" class="ghost" type="button">뒤로</button>
+      </div>
+    </section>
+
+    <div id="hud" hidden>
+      <div id="hearts" aria-label="목숨"></div>
+      <div class="scoreboard">
+        <p id="score-label">0</p>
+        <p id="distance-label">0m</p>
+      </div>
+      <p id="tip"></p>
+    </div>
+
+    <div id="controls" hidden>
+      <button type="button" data-act="left" aria-label="왼쪽 레인">◀</button>
+      <button type="button" data-act="jump" aria-label="점프">점프</button>
+      <button type="button" data-act="right" aria-label="오른쪽 레인">▶</button>
+    </div>
+
+    <section id="screen-over" class="screen" hidden>
+      <div class="panel">
+        <h2>정글 달리기 종료!</h2>
+        <p id="over-score" class="big">0</p>
+        <p id="over-distance">거리 0m</p>
+        <p id="over-best">최고 점수 0</p>
+        <p id="over-new" class="new-best" hidden>새로운 최고 점수!</p>
+        <div class="actions">
+          <button id="btn-retry" class="primary" type="button">다시 하기</button>
+          <button id="btn-reselect" class="ghost" type="button">캐릭터 선택</button>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script src="game.js"></script>
+</body>
+</html>
