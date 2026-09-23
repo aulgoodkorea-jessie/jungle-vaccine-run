@@ -2,13 +2,14 @@
 // 바이브 코딩 실습용 3레인 러닝 게임.
 // 속도를 더 빠르게, 목숨을 더 많이 — 아래 숫자만 바꿔도 느낌이 달라집니다.
 const CONFIG = {
-  maxLives: 5,
+  maxLives: 3,
   invulnTime: 1,
   startSpeed: 0.34,
   maxSpeed: 0.95,
   jumpSpeed: 720,
   gravity: 1900,
   jumpClear: 52,
+  playerHeight: { dog: 112, dogSit: 108, chick: 82 },
 };
 
 const W = 480;
@@ -18,7 +19,7 @@ const STORAGE_KEY = "jungle-vaccine-run";
 const TIPS = [
   "낮은 초록 바이러스는 점프하거나 레인을 바꾸세요",
   "키 큰 보라 바이러스는 레인 이동으로만 피해요",
-  "백신은 목숨을 1 회복해요. 최대는 5개",
+  "백신은 목숨을 1 회복해요. 최대는 3개",
   "별·과일·보석을 연속으로 먹으면 콤보!",
 ];
 
@@ -35,7 +36,15 @@ const ui = {
   score: document.getElementById("score-label"),
   distance: document.getElementById("distance-label"),
   tip: document.getElementById("tip"),
-  mute: document.getElementById("mute"),
+  gear: document.getElementById("btn-gear"),
+  settings: document.getElementById("screen-settings"),
+  settingsNote: document.getElementById("settings-note"),
+  optBgm: document.getElementById("opt-bgm"),
+  optSfx: document.getElementById("opt-sfx"),
+  volBgm: document.getElementById("vol-bgm"),
+  volSfx: document.getElementById("vol-sfx"),
+  volBgmLabel: document.getElementById("vol-bgm-label"),
+  volSfxLabel: document.getElementById("vol-sfx-label"),
   menuCharacter: document.getElementById("menu-character"),
   menuBest: document.getElementById("menu-best"),
   overScore: document.getElementById("over-score"),
@@ -49,7 +58,13 @@ const sprites = { dog: {}, chick: {} };
 let state = "menu";
 let character = "dog";
 let best = 0;
-let muted = false;
+let paused = false;
+const audioSettings = {
+  bgm: true,
+  sfx: true,
+  bgmVolume: 0.32,
+  sfxVolume: 1,
+};
 
 let lives = CONFIG.maxLives;
 let distance = 0;
@@ -83,19 +98,32 @@ function loadSave() {
     const data = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
     best = Number(data.best) || 0;
     character = data.character === "chick" ? "chick" : "dog";
-    muted = Boolean(data.mute);
+    if (data.audio) {
+      audioSettings.bgm = data.audio.bgm !== false;
+      audioSettings.sfx = data.audio.sfx !== false;
+      audioSettings.bgmVolume = clamp01(data.audio.bgmVolume, 0.32);
+      audioSettings.sfxVolume = clamp01(data.audio.sfxVolume, 1);
+    } else if (data.mute) {
+      audioSettings.bgm = false;
+      audioSettings.sfx = false;
+    }
   } catch (err) {
     best = 0;
     character = "dog";
-    muted = false;
   }
+}
+
+function clamp01(value, fallback) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(1, n));
 }
 
 function save() {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({
     best,
     character,
-    mute: muted,
+    audio: audioSettings,
   }));
 }
 
@@ -112,7 +140,7 @@ function loadImage(src) {
 // 효과음: Mixkit (Mixkit License)
 const bgm = new Audio("audio/bgm.mp3");
 bgm.loop = true;
-bgm.volume = 0.32;
+bgm.volume = audioSettings.bgmVolume;
 bgm.preload = "auto";
 
 const sfx = {
@@ -129,16 +157,22 @@ Object.values(sfx).forEach((src) => {
 let musicOn = false;
 
 function playSfx(name, volume) {
-  if (muted) return;
+  if (!audioSettings.sfx || audioSettings.sfxVolume <= 0) return;
   const audio = new Audio(sfx[name]);
-  audio.volume = volume;
+  audio.volume = Math.min(1, volume * audioSettings.sfxVolume);
   audio.play().catch(() => {});
+}
+
+function applyMusic() {
+  bgm.volume = audioSettings.bgmVolume;
+  const canPlay = musicOn && audioSettings.bgm && audioSettings.bgmVolume > 0 && state !== "over";
+  if (canPlay) bgm.play().catch(() => {});
+  else bgm.pause();
 }
 
 function ensureMusic() {
   musicOn = true;
-  if (muted || state === "over") return;
-  bgm.play().catch(() => {});
+  applyMusic();
 }
 
 function playJump() { playSfx("jump", 0.55); }
@@ -150,13 +184,58 @@ function playOver() {
   playSfx("over", 0.7);
 }
 
-function setMute(next) {
-  muted = next;
-  ui.mute.textContent = muted ? "소리 꺼짐" : "소리 켜짐";
-  ui.mute.setAttribute("aria-pressed", muted ? "true" : "false");
-  if (muted) bgm.pause();
-  else if (musicOn && state !== "over") ensureMusic();
+function syncSettingsUi() {
+  ui.optBgm.setAttribute("aria-pressed", audioSettings.bgm ? "true" : "false");
+  ui.optSfx.setAttribute("aria-pressed", audioSettings.sfx ? "true" : "false");
+  ui.volBgm.value = String(Math.round(audioSettings.bgmVolume * 100));
+  ui.volSfx.value = String(Math.round(audioSettings.sfxVolume * 100));
+  ui.volBgmLabel.textContent = ui.volBgm.value;
+  ui.volSfxLabel.textContent = ui.volSfx.value;
+  ui.volBgm.disabled = !audioSettings.bgm;
+  ui.volSfx.disabled = !audioSettings.sfx;
+}
+
+function readSettings() {
+  audioSettings.bgm = ui.optBgm.getAttribute("aria-pressed") === "true";
+  audioSettings.sfx = ui.optSfx.getAttribute("aria-pressed") === "true";
+  audioSettings.bgmVolume = Number(ui.volBgm.value) / 100;
+  audioSettings.sfxVolume = Number(ui.volSfx.value) / 100;
+  syncSettingsUi();
+  ensureMusic();
   save();
+}
+
+function openSettings() {
+  paused = state === "play";
+  ui.menu.hidden = true;
+  ui.select.hidden = true;
+  ui.over.hidden = true;
+  ui.settings.hidden = false;
+  ui.settingsNote.hidden = !paused;
+  ui.gear.hidden = true;
+  if (paused) {
+    ui.hud.hidden = true;
+    ui.controls.hidden = true;
+  }
+  syncSettingsUi();
+  ensureMusic();
+}
+
+function closeSettings() {
+  ui.settings.hidden = true;
+  paused = false;
+  const playing = state === "play";
+  ui.menu.hidden = state !== "menu";
+  ui.select.hidden = state !== "select";
+  ui.over.hidden = state !== "over";
+  ui.hud.hidden = !playing;
+  ui.controls.hidden = !playing;
+  ui.gear.hidden = !playing;
+  ensureMusic();
+}
+
+function settingsOpen() {
+  return !ui.settings.hidden;
 }
 
 function characterName() {
@@ -173,11 +252,14 @@ function refreshMenu() {
 
 function show(name) {
   state = name;
+  paused = false;
+  ui.settings.hidden = true;
   ui.menu.hidden = name !== "menu";
   ui.select.hidden = name !== "select";
   ui.over.hidden = name !== "over";
   ui.hud.hidden = name !== "play";
   ui.controls.hidden = name !== "play";
+  ui.gear.hidden = name !== "play";
 }
 
 function resetRun() {
@@ -369,6 +451,13 @@ function onScoreItem(entity) {
 }
 
 function update(dt) {
+  if (paused) {
+    flash = Math.max(0, flash - dt * 1.4);
+    shake = Math.max(0, shake - dt * 18);
+    updateFx(dt);
+    return;
+  }
+
   roadScroll = (roadScroll + dt * (state === "play" ? speed() * 1.4 : 0.12)) % 1;
 
   if (state !== "play") {
@@ -704,7 +793,7 @@ function drawEntities() {
 
 function drawPlayer() {
   const p = playerScreen();
-  const running = player.jumpZ <= 0 && state !== "over";
+  const running = player.jumpZ <= 0 && state !== "over" && !paused;
   const bob = running ? Math.sin(performance.now() / 90) : 0;
   const sit = state === "over" && character === "dog";
   let img;
@@ -715,18 +804,18 @@ function drawPlayer() {
     pixel = true;
     const step = Math.floor(performance.now() / 140) % 2;
     img = state === "over" ? sprites.chick.front : (running && step ? sprites.chick.side2 : sprites.chick.side);
-    height = 124;
+    height = CONFIG.playerHeight.chick;
   } else if (sit) {
     img = sprites.dog.sit;
-    height = 168;
+    height = CONFIG.playerHeight.dogSit;
   } else {
     img = sprites.dog.run;
-    height = 176;
+    height = CONFIG.playerHeight.dog;
   }
 
   ctx.fillStyle = `rgba(0,0,0,${0.22 - Math.min(0.16, player.jumpZ / 700)})`;
   ctx.beginPath();
-  ctx.ellipse(p.x, laneY(1) + 6, 36 - player.jumpZ * 0.04, 12, 0, 0, Math.PI * 2);
+  ctx.ellipse(p.x, laneY(1) + 4, 22 - player.jumpZ * 0.02, 8, 0, 0, Math.PI * 2);
   ctx.fill();
 
   if (invuln > 0 && Math.floor(performance.now() / 80) % 2 === 0) ctx.globalAlpha = 0.35;
@@ -793,6 +882,22 @@ function bind() {
     show("select");
     ensureMusic();
   });
+  document.getElementById("btn-settings").addEventListener("click", openSettings);
+  ui.gear.addEventListener("click", openSettings);
+  document.getElementById("btn-settings-close").addEventListener("click", closeSettings);
+  [ui.optBgm, ui.optSfx].forEach((button) => {
+    button.addEventListener("click", () => {
+      const next = button.getAttribute("aria-pressed") !== "true";
+      button.setAttribute("aria-pressed", next ? "true" : "false");
+      readSettings();
+    });
+  });
+  [ui.volBgm, ui.volSfx].forEach((input) => {
+    input.addEventListener("input", readSettings);
+  });
+  ui.volSfx.addEventListener("change", () => {
+    if (audioSettings.sfx) playSfx("score", 0.62);
+  });
   document.getElementById("btn-back").addEventListener("click", () => {
     show("menu");
     ensureMusic();
@@ -806,10 +911,6 @@ function bind() {
     show("select");
     ensureMusic();
   });
-  ui.mute.addEventListener("click", () => {
-    setMute(!muted);
-  });
-
   document.querySelectorAll(".card").forEach((card) => {
     card.addEventListener("click", () => {
       character = card.dataset.character;
@@ -831,6 +932,10 @@ function bind() {
     if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " "].includes(event.key)) {
       event.preventDefault();
     }
+    if (settingsOpen()) {
+      if (event.key === "Escape") closeSettings();
+      return;
+    }
     if (state === "menu" && (event.key === "Enter" || event.key === " ")) {
       startRun();
       return;
@@ -847,10 +952,15 @@ function bind() {
   const frameEl = document.getElementById("frame");
   let pointer = null;
   frameEl.addEventListener("pointerdown", (event) => {
-    if (event.target.closest("button")) return;
+    if (settingsOpen()) return;
+    if (event.target.closest("button, input, label")) return;
     pointer = { x: event.clientX, y: event.clientY, id: event.pointerId };
   });
   frameEl.addEventListener("pointerup", (event) => {
+    if (settingsOpen()) {
+      pointer = null;
+      return;
+    }
     if (!pointer || pointer.id !== event.pointerId) return;
     const dx = event.clientX - pointer.x;
     const dy = event.clientY - pointer.y;
@@ -870,7 +980,7 @@ function bind() {
 
 async function boot() {
   loadSave();
-  setMute(muted);
+  syncSettingsUi();
   refreshMenu();
   const [dogFront, dogRun, dogSit, chickFront, chickSide, chickSide2] = await Promise.all([
     loadImage("assets/dog-front.png"),

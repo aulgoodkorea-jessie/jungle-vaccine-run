@@ -10,7 +10,11 @@
   <div id="frame">
     <canvas id="game" width="480" height="780"></canvas>
 
-    <button id="mute" type="button" aria-pressed="false">소리 켜짐</button>
+    <button id="btn-gear" type="button" aria-label="설정" hidden>
+      <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+        <path fill="currentColor" d="M19.14 12.94c.04-.31.06-.63.06-.94s-.02-.63-.06-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.03 7.03 0 0 0-1.63-.94l-.36-2.54a.5.5 0 0 0-.5-.42h-3.84a.5.5 0 0 0-.5.42l-.36 2.54c-.58.23-1.12.54-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58c-.04.31-.06.63-.06.94s.02.63.06.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32c.13.22.39.31.6.22l2.39-.96c.51.4 1.06.72 1.63.94l.36 2.54c.05.24.26.42.5.42h3.84c.24 0 .45-.18.5-.42l.36-2.54c.57-.22 1.12-.54 1.63-.94l2.39.96c.22.09.47 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58zM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7z"/>
+      </svg>
+    </button>
 
     <section id="screen-menu" class="screen">
       <p class="eyebrow">정글 속 달리기</p>
@@ -19,6 +23,7 @@
       <div class="actions">
         <button id="btn-start" class="primary" type="button">달리러 가기</button>
         <button id="btn-select" class="ghost" type="button">캐릭터 고르기</button>
+        <button id="btn-settings" class="ghost" type="button">설정</button>
       </div>
       <div class="help">
         <p><b>← →</b> 레인 이동 · <b>↑ / Space</b> 점프</p>
@@ -63,6 +68,42 @@
       <button type="button" data-act="jump" aria-label="점프">점프</button>
       <button type="button" data-act="right" aria-label="오른쪽 레인">▶</button>
     </div>
+
+    <section id="screen-settings" class="screen" hidden>
+      <div class="panel">
+        <h2>설정</h2>
+        <p id="settings-note" hidden>달리기는 잠시 멈춰 있어요.</p>
+        <div class="setting-block">
+          <div class="setting-head">
+            <div>
+              <strong>배경음악</strong>
+              <p>달릴 때 따라오는 음악</p>
+            </div>
+            <button id="opt-bgm" class="switch" type="button" aria-pressed="true" aria-label="배경음악"></button>
+          </div>
+          <label class="volume">
+            <span>크기 <b id="vol-bgm-label">32</b></span>
+            <input id="vol-bgm" type="range" min="0" max="100" value="32">
+          </label>
+        </div>
+        <div class="setting-block">
+          <div class="setting-head">
+            <div>
+              <strong>효과음</strong>
+              <p>점프, 획득, 충돌 소리</p>
+            </div>
+            <button id="opt-sfx" class="switch" type="button" aria-pressed="true" aria-label="효과음"></button>
+          </div>
+          <label class="volume">
+            <span>크기 <b id="vol-sfx-label">100</b></span>
+            <input id="vol-sfx" type="range" min="0" max="100" value="100">
+          </label>
+        </div>
+        <div class="actions">
+          <button id="btn-settings-close" class="primary" type="button">돌아가기</button>
+        </div>
+      </div>
+    </section>
 
     <section id="screen-over" class="screen" hidden>
       <div class="panel">
